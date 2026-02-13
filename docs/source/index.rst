@@ -1,10 +1,8 @@
-Welcome to Lumache's documentation!
+Welcome to LSST Alerts at UZH documentation!
 ===================================
 
-**Lumache** (/lu'make/) is a Python library for cooks and food lovers
-that creates recipes mixing random ingredients.
-It pulls data from the `Open Food Facts database <https://world.openfoodfacts.org/>`_
-and offers a *simple* and *intuitive* API.
+**LSST Alerts at UZH** .
+This page will be populated with details on the implementation of the LSST Alert Stream at the University of Zurich, including how to use it and how to contribute.
 
 Check out the :doc:`usage` section for further information, including
 how to :ref:`installation` the project.

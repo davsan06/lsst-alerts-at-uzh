@@ -6,29 +6,16 @@ Usage
 Installation
 ------------
 
-To use Lumache, first install it using pip:
+LSST Science Pipeline shared installation available in the UZH Science Cluster (S3IT).
 
-.. code-block:: console
+We follow the installation method lsstinstall (`LSST Install Guide <https://pipelines.lsst.io/install/lsstinstall.html>`_) with version tag ``v29_2_1``. A shared installation lives in ``/shares/soares-santos.physik.uzh/envs/lsst_stack``.
 
-   (.venv) $ pip install lumache
+.. code-block:: bash
 
-Creating recipes
-----------------
+   # Every time we start a new terminal we have to setup the environment by running the following commands:
+   cd /shares/soares-santos.physik.uzh/envs/lsst_stack
+   source loadLSST.sh
+   setup lsst_distrib
 
-To retrieve a list of random ingredients,
-you can use the ``lumache.get_random_ingredients()`` function:
-
-.. autofunction:: lumache.get_random_ingredients
-
-The ``kind`` parameter should be either ``"meat"``, ``"fish"``,
-or ``"veggies"``. Otherwise, :py:func:`lumache.get_random_ingredients`
-will raise an exception.
-
-.. autoexception:: lumache.InvalidKindError
-
-For example:
-
->>> import lumache
->>> lumache.get_random_ingredients()
-['shells', 'gorgonzola', 'parsley']
+The installation has been successfully tested by running the demo pipeline (`LSST Demo Pipeline <https://pipelines.lsst.io/install/demo.html>`_).
 
