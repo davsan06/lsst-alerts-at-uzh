@@ -18,11 +18,15 @@ We follow the installation method lsstinstall (`LSST Install Guide <https://pipe
    conda activate /shares/soares-santos.physik.uzh/envs/lsst_stack/lsst-scipipe-10.1.0
    setup lsst_distrib
 
+.. _demo:
+
 Quick demo pipeline
 --------------------
 
 A quick way to check that the setup is working fine is to run a short demo, as described in detail in `LSST Demo Pipeline <https://pipelines.lsst.io/install/demo.html>`_ . The data required for this
 test is already available in the shared folder, under 
+
+Navigate to the directory containing the demo data:
 
 .. code-block:: bash
 
@@ -41,6 +45,8 @@ And finally run the demo pipeline:
    ./bin/run_demo.sh
 
 A successful run will begin by displaying the creation of the Butler object, followed by the execution of the various pipeline stages. As of February 20, 2026, some warning messages may appear at the end of the run; these can be safely ignored. Additionally, if this test is executed on the login node without allocating sufficient memory, it may fail due to inadequate memory resources.
+
+.. _tutorials:
 
 Tutorials
 ---------
