@@ -2,9 +2,9 @@
 
 # -- Project information
 
-project = 'Lumache'
-copyright = '2021, Graziella'
-author = 'Graziella'
+project = 'LSST Image processing at UZH'
+copyright = '2026, UZH GW Cosmo group'
+author = 'UZH GW Cosmo group'
 
 release = '0.1'
 version = '0.1.0'
