@@ -60,4 +60,4 @@ Set up the necessary environment variables and pre-requisites by running:
 
 .. code-block:: bash
 
-   setup -r . -j rc2_subset
+   setup -r -j rc2_subset
