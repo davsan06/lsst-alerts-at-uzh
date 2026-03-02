@@ -92,13 +92,11 @@ This is a one-time setup.
 Connecting to the Cluster with X11 Forwarding
 ----------------------------------------------
 
-[DSC: to be updated]
-
 Always connect using the ``-Y`` flag to enable X11 forwarding:
 
 .. code-block:: bash
 
-   ssh -Y davisa@cluster.s3it.uzh.ch
+   ssh -Y <user>@cluster.s3it.uzh.ch
 
 After logging in, verify that the display is set correctly:
 
@@ -143,12 +141,6 @@ Using DS9 with the LSST Stack
    between DS9 and the LSST stack only works within the same node. The
    cluster has multiple login nodes (e.g. ``u24-login-1``, ``u24-login-2``,
    ``u24-login-3``) and connections may land on different ones by default.
-
-Always connect to a specific node explicitly:
-
-.. code-block:: bash
-
-   ssh -Y davisa@u24-login-1.cluster.s3it.uzh.ch
 
 Open two terminals, both connected to the **same node** with ``ssh -Y``.
 Verify this before starting:
@@ -223,12 +215,6 @@ Troubleshooting
 
       hostname  # run in both terminals — output must match
 
-   If the hostnames differ, reconnect both terminals to the same node:
-
-   .. code-block:: bash
-
-      ssh -Y davisa@u24-login-1.cluster.s3it.uzh.ch
-
 **DS9 freezes the terminal**
    You launched DS9 without ``&``. Kill it with ``Ctrl+C`` and relaunch
    with ``ds9 &``.
@@ -240,3 +226,42 @@ Troubleshooting
    .. code-block:: python
 
       display.mtv(calexp.image)
+
+Submitting Single Frame Image Processing Jobs to the Cluster
+============================================================
+
+Some steps of image processing can be time and resource-intensive. To speed up the process, tasks can be parallelized. 
+However, it is important to carefully select the number of cores and memory to ensure the job completes successfully. 
+Below is an example of how to submit a `singleFrame` task, as described in the tutorial:
+
+.. code-block:: bash
+
+   #!/bin/bash
+   #SBATCH --job-name=singleFrame
+   #SBATCH -t 29:00:00
+   #SBATCH --nodes=1
+   #SBATCH --ntasks=8
+   #SBATCH --mem-per-cpu=8G
+   #SBATCH -o log/singleFrame_02032026.log 
+
+   # Initialize the LSST Science Pipeline
+   cd /shares/soares-santos.physik.uzh/envs/lsst_stack
+   source loadLSST.sh
+   conda activate /shares/soares-santos.physik.uzh/envs/lsst_stack/lsst-scipipe-10.1.0
+   setup lsst_distrib
+
+   # Load environment variables specific to the tutorial data
+   cd /shares/soares-santos.physik.uzh/demo_data
+   setup -j -r rc2_subset
+
+   # Run the singleFrame task
+   pipetask run --register-dataset-types \
+   -b $RC2_SUBSET_DIR/SMALL_HSC/butler.yaml \
+   -i HSC/RC2/defaults \
+   -o u/$USER/single_frame \
+   -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#singleFrame \
+   -j 8
+
+   echo "Job completed successfully!"
+
+The process is expected to complete in approximately 1 hour and 24 minutes, with a peak memory usage of 48 GB.
