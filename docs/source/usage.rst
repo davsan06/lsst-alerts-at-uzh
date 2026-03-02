@@ -230,6 +230,10 @@ Troubleshooting
 Submitting Single Frame Image Processing Jobs to the Cluster
 ============================================================
 
+.. contents:: Table of Contents
+   :local:
+   :depth: 2
+
 Some steps of image processing can be time and resource-intensive. To speed up the process, tasks can be parallelized. 
 However, it is important to carefully select the number of cores and memory to ensure the job completes successfully. 
 Below is an example of how to submit a `singleFrame` task, as described in the tutorial:
@@ -238,11 +242,11 @@ Below is an example of how to submit a `singleFrame` task, as described in the t
 
    #!/bin/bash
    #SBATCH --job-name=singleFrame
-   #SBATCH -t 29:00:00
+   #SBATCH --time=29:00:00
    #SBATCH --nodes=1
    #SBATCH --ntasks=8
    #SBATCH --mem-per-cpu=8G
-   #SBATCH -o log/singleFrame_02032026.log 
+   #SBATCH --output=log/singleFrame_02032026.log 
 
    # Initialize the LSST Science Pipeline
    cd /shares/soares-santos.physik.uzh/envs/lsst_stack
