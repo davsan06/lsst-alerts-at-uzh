@@ -50,17 +50,185 @@ A successful run will begin by displaying the creation of the Butler object, fol
 Tutorials
 ---------
 
-The series of `tutorials <https://pipelines.lsst.io/>`_ covers the various stages of the LSST Science Pipeline in depth. Necessary data for the tutorials is available in the shared folder, under:
+The series of `Getting Started tutorials <https://pipelines.lsst.io/getting-started/index.html>`_ on ``pipelines.lsst.io`` covers the various stages of the LSST Science Pipeline in depth, from setting up a Butler repository through to multi-band catalog analysis. The tutorials are written against the latest weekly release, and the v29.2.1 channel of the docs is occasionally behind the ``weekly`` channel. When in doubt, cross-check with `the weekly version <https://pipelines.lsst.io/v/weekly/getting-started/index.html>`_ of the same page — it is sometimes more accurate for v29.2.1 than the v29.2.1-labeled page itself. The :ref:`v29-tutorial-gotchas` section below documents the cases we have hit so far.
+
+The tutorial dataset (``rc2_subset``) is available in the shared folder. Set up the necessary environment variables and pre-requisites by running:
 
 .. code-block:: bash
 
    cd /shares/soares-santos.physik.uzh/demo_data
+   setup -j -r rc2_subset
 
-Set up the necessary environment variables and pre-requisites by running:
+Throughout the tutorials, output collections follow the convention ``u/$USER/<step_name>`` (for example ``u/$USER/single_frame``, ``u/$USER/warps``, ``u/$USER/coadds``). The ``u/`` prefix is a per-user namespace inside the Butler registry, so multiple people can run the same tutorial against the same shared repository without overwriting each other's outputs.
+
+Shared tutorial resources
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``rc2_subset`` data and a set of jobscripts that run each tutorial step on the cluster are available under:
+
+.. code-block:: none
+
+   /shares/soares-santos.physik.uzh/demo_data/rc2_subset    # tutorial dataset
+   /shares/soares-santos.physik.uzh/demo_data/tutorials     # SLURM jobscripts for each step
+
+The jobscripts are named after the tutorial part they correspond to. Copy them to your own working directory and edit the paths and ``--output`` log file before submitting.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Jobscript
+     - Tutorial step
+   * - ``tut1_butler.py``
+     - Part 1 — Butler repository sanity check
+   * - ``tut2_singframe.sh``
+     - Part 2 — single frame processing (``#singleFrame``)
+   * - ``tut2_bis_graphq.sh``
+     - Part 2 — quantum graph generation for inspection
+   * - ``tut4_fgcm.sh``
+     - Part 4 — FGCM photometric calibration
+   * - ``tut4_gbdes.sh``
+     - Part 4 — gbdes astrometric fit
+   * - ``tut4_applycalibr.sh``
+     - Part 4 — apply the source calibration
+   * - ``tut5a_warping.sh``
+     - Part 5 — warping (legacy ``#makeWarp`` version, kept for reference)
+   * - ``tut5a_bis_warping.sh``
+     - Part 5 — warping with the v29.2.1-correct ``#makeDirectWarp,makePsfMatchedWarp`` (use this one)
+   * - ``tut5b_coadding.sh``
+     - Part 5 — coadd assembly (``#selectDeepCoaddVisits,assembleCoadd``)
+   * - ``tut6a_detection.sh``
+     - Part 6 — coadd detection and measurement (``#coadd_measurement``)
+   * - ``tut6b_forcephoto.sh``
+     - Part 6 — forced photometry (``#forcedPhotCoadd`` only; see :ref:`v29-tutorial-gotchas`)
+
+The directory also contains rendered artifacts from past runs (``single_frame.dot``, ``single_frame.qgraph``, ``single_frame.pdf``) that you can use as references for what the quantum graph looks like before committing to a long compute run.
+
+.. note::
+
+   Before kicking off a long ``pipetask run``, dry-build the quantum graph to confirm all inputs resolve. This was the single most useful debugging step we found while validating the v29.2.1 tutorials:
+
+   .. code-block:: bash
+
+      pipetask build \
+        -b $RC2_SUBSET_DIR/SMALL_HSC/butler.yaml \
+        -i u/$USER/<input_collection> \
+        -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#<subset_or_task> \
+        -d "<your data query>" \
+        --show pipeline-graph
+
+   This builds the graph but does not execute any quanta. If a required dataset type is missing or unregistered, the error appears in seconds rather than after a multi-hour SLURM job. ``--show pipeline-graph`` also prints the full input/output dataset list per task, which is invaluable for spotting missing prerequisites.
+
+.. _v29-tutorial-gotchas:
+
+Known issues with the v29.2.1 tutorials
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Getting Started tutorial pages on ``pipelines.lsst.io`` were written against an earlier pipeline release and have not been fully refreshed for v29.2.1. The two issues below will block you from finishing the tutorial end-to-end if followed verbatim.
+
+Part 5 — ``makeWarp`` was split into ``makeDirectWarp`` and ``makePsfMatchedWarp``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The v29.2.1 tutorial page for `Part 5: coadding images <https://pipelines.lsst.io/getting-started/coaddition.html>`_ instructs you to run:
 
 .. code-block:: bash
 
-   setup -j -r rc2_subset
+   -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#makeWarp
+
+In v29.2.1, the ``makeWarp`` task no longer exists. It has been split into two separate tasks:
+
+- ``makeDirectWarp`` — produces the direct (non-PSF-matched) warps. This is the replacement for what ``makeWarp`` did by default.
+- ``makePsfMatchedWarp`` — produces PSF-matched warps used by ``assembleCoadd`` for artifact rejection (``compareWarp``-style assembly).
+
+In ``$DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml``, the production ``nightlyStep3`` subset includes **both** warp tasks before ``assembleCoadd``, which means ``assembleCoadd`` is configured to consume both warp types. Running only ``makeDirectWarp`` leaves the quantum graph for ``assembleCoadd`` unable to resolve its PSF-matched warp inputs.
+
+The corrected command for the warping step is:
+
+.. code-block:: bash
+
+   pipetask run --register-dataset-types \
+   -b $RC2_SUBSET_DIR/SMALL_HSC/butler.yaml \
+   -i u/$USER/source_calibration,u/$USER/gbdes,u/$USER/fgcm \
+   -o u/$USER/warps \
+   -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#makeDirectWarp,makePsfMatchedWarp \
+   -d "skymap = 'hsc_rings_v1' AND tract = 9813 AND patch in (38, 39, 40, 41)"
+
+The subsequent coadd assembly step (``#selectDeepCoaddVisits,assembleCoadd``) is unchanged from the tutorial.
+
+.. note::
+
+   You can verify the rename in your installation directly:
+
+   .. code-block:: bash
+
+      grep -E "^\s+(makeWarp|makeDirectWarp|makePsfMatchedWarp):" \
+        $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml
+
+   In v29.2.1 only ``makeDirectWarp`` and ``makePsfMatchedWarp`` will appear; ``makeWarp`` is absent.
+
+Part 6 — the ``forced_objects`` subset has missing prerequisites
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The v29.2.1 tutorial page for `Part 6: measuring sources <https://pipelines.lsst.io/getting-started/photometry.html>`_ instructs you to run:
+
+.. code-block:: bash
+
+   -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#forced_objects
+
+Running this command after completing the tutorial up to and including ``coadd_measurement`` fails at the quantum graph build stage with two errors:
+
+.. code-block:: none
+
+   Search for dataset type 'pvi' ... is doomed to fail.
+   ...
+   QuantumGraphBuilderError: No datasets for overall-input 'deepCoadd_Sersic_multiprofit' found
+   (the dataset type is not even registered).
+
+Both errors are caused by the ``forced_objects`` subset bundling tasks whose prerequisites are not produced by the preceding tutorial subsets:
+
+- ``forcedPhotCcd`` requires the ``pvi`` (post-visit image) dataset, which is produced by ``reprocessVisitImage`` in the production ``nightlyStep4`` subset. The tutorial never runs ``nightlyStep4``.
+- ``transformObjectTable`` requires ``deepCoadd_Sersic_multiprofit``, produced by ``fitDeblendedObjectsSersic``. This task is in ``nightlyStep3`` but **not** in the tutorial-friendly ``coadd_measurement`` subset.
+
+The simplest fix that lets you finish the tutorial is to run only the task whose output Part 7 actually consumes — ``forcedPhotCoadd``, which produces ``deepCoadd_forced_src``:
+
+.. code-block:: bash
+
+   pipetask run --register-dataset-types \
+   -b $RC2_SUBSET_DIR/SMALL_HSC/butler.yaml \
+   -i u/$USER/coadd_meas \
+   -o u/$USER/objects \
+   -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#forcedPhotCoadd \
+   -d "skymap = 'hsc_rings_v1' AND tract = 9813 AND patch in (38, 39, 40, 41)"
+
+This is enough to complete Part 7 of the tutorial (loading ``deepCoadd_forced_src`` per band and producing the color-color diagram).
+
+.. note::
+
+   If you want the full tract-level ``objectTable_tract`` output, you need to run the missing prerequisites first:
+
+   .. code-block:: bash
+
+      # 1. Produce the Sersic and PSF Gaussian fits that transformObjectTable needs
+      pipetask run --register-dataset-types \
+        -b $RC2_SUBSET_DIR/SMALL_HSC/butler.yaml \
+        -i u/$USER/coadd_meas \
+        -o u/$USER/coadd_meas_extra \
+        -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#fitDeepCoaddPsfGaussians,fitDeblendedObjectsSersic \
+        -d "skymap = 'hsc_rings_v1' AND tract = 9813 AND patch in (38, 39, 40, 41)"
+
+      # 2. Then run forced photometry and the object-table tasks (skipping forcedPhotCcd)
+      pipetask run --register-dataset-types \
+        -b $RC2_SUBSET_DIR/SMALL_HSC/butler.yaml \
+        -i u/$USER/coadd_meas_extra \
+        -o u/$USER/objects \
+        -p $DRP_PIPE_DIR/pipelines/HSC/DRP-RC2_subset.yaml#forcedPhotCoadd,transformObjectTable,writeObjectTable,consolidateObjectTable \
+        -d "skymap = 'hsc_rings_v1' AND tract = 9813 AND patch in (38, 39, 40, 41)"
+
+   ``forcedPhotCcd`` is intentionally omitted because it requires ``pvi`` from ``reprocessVisitImage`` (a ``nightlyStep4`` task). The production pipeline notes that many ``forcedPhotCcd`` quanta are expected to fail when run without the full upstream chain.
+
+.. warning::
+
+   The ``echo "Job completed successfully!"`` line at the end of the SLURM jobscripts runs unconditionally after ``pipetask`` exits, so it does **not** indicate that ``pipetask`` itself succeeded. Always check the job log for Python tracebacks, or add ``set -e`` near the top of the jobscript so the shell aborts on the first failed command.
 
 Using DS9 on the UZH Science Cluster
 =====================================

@@ -4,7 +4,11 @@
 
 project = 'LSST Image processing at UZH'
 copyright = '2026, UZH GW Cosmo group'
-author = 'UZH GW Cosmo group'
+author = 'David Sanchez Cid (UZH GW Cosmo group)'
+
+# Documentation drafted in collaboration with Anthropic's Claude (Opus 4.7)
+# during interactive debugging sessions on the UZH Science Cluster, and
+# verified against the running v29.2.1 LSST Science Pipelines installation.
 
 release = '0.1'
 version = '0.1.0'
