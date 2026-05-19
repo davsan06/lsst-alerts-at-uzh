@@ -18,12 +18,14 @@ Contents
 
    usage
    api
+   ingest
 
 About this documentation
 ------------------------
 
 This documentation is maintained by **David Sanchez Cid**
-(`david.sanchezcid@physik.uzh.ch <mailto:david.sanchezcid@physik.uzh.ch>`_),
+(`david.sanchezcid@physik.uzh.ch <mailto:david.sanchezcid@physik.uzh.ch>`_) and **Sean Patrick MacBride**
+(`sean.macbride@physik.uzh.ch <mailto:sean.macbride@physik.uzh.ch>`_),
 on behalf of the UZH GW Cosmo group.
 
 Portions of the technical content — particularly the v29.2.1 tutorial notes,
