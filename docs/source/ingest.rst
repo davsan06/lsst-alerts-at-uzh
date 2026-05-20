@@ -322,17 +322,136 @@ Ingesting data
 Ingesting raw data
 --------------------------------
 
+We're now prepared to ingest raw science frames. If raw frames are being stored in multiple directories, this command needs to be repeated for each directory. Alternatively, a sufficient glob which is able to locate all files of interest may be supplied. Here's an example data ingest command: ::
+
+   LOGFILE=$LOGDIR/ingest_science.log; \
+   SCIFILES=/path/to/science/raw/images/raw_*.fz; \
+   date | tee $LOGFILE; \
+   butler ingest-raws $REPO $SCIFILES --transfer link \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+Raw science exposures have now been added to the ``DECam/raw/all`` collection in the repo. Collections define groups of data, and can be listed (and searched) using: ::
+
+   butler query-collections $REPO "DECam/raw/all"
+
+Ingested exposures can be listed on the command line using: ::
+
+   butler query-dimension-records $REPO exposure \
+   --where "instrument='DECam' AND exposure.observation_type='science'"
+
+This view shows all available dimensions associated with each ingested science image, including the observation ID, the physical filter, and the observation type. Alternatively, datasets can be queried directly using query-datasets, with optional SQL-like ``--where`` arguments to search specific dimensions, e.g.: ::
+
+   WHERE="instrument='DECam' AND exposure=123456"
+
+   WHERE="instrument='DECam' AND detector=1"
+
+   WHERE="instrument='DECam'
+   AND exposure.observation_type='science'
+   AND exposure.day_obs > 20250830
+   AND exposure.day_obs < 20250902
+   AND detector=1"
+   
+   butler query-datasets $REPO --where $WHERE raw
+
+| Note: To successfully use the ``--where`` argument, other dimensions may be required, such as instrument. The butler will complain with a UserExpressionError if a required dimension is not found.
+
+A list of science exposure IDs can similarly be extracted within python: ::
+
+   queryData = butler.registry.queryDatasets
+   where = "exposure.observation_type='science' AND detector=1"
+   exps = list(queryData("raw", collections="DECam/raw/all",
+                         instrument="DECam", where=where))
+   expids = tuple(x.dataId["exposure"] for x in exps)
+   print(f'SCIEXPS="{expids}"')
+
+The test dataset used here returns a list of science exposures: ::
+
+   SCIEXPS="(971666, 971667, 971668, ..., 1068723)"
+
 Ingesting calib data
 --------------------------------
 
 Ingesting bias data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Ingesting dark data
+As with the raw science frames above, raw bias frames ('zero') are also ingested: ::
+
+   LOGFILE=$LOGDIR/ingest_bias.log; \
+   BIASFILES=/path/to/raw/bias/images/raw_*.fz; \
+   date | tee $LOGFILE; \
+   butler ingest-raws $REPO $BIASFILES --transfer link \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+| Note: The runtime for this command was ~1 minute, ingesting 3100 distinct Butler datasets from 50 exposures.
+
+Bias exposures have now been ingested into the repo. Check that the bias calibration frames have been successfully ingested using: ::
+
+   butler query-dimension-records $REPO exposure \
+   --where "instrument='DECam' AND exposure.observation_type='zero'"
+
+A list of bias exposure IDs can be extracted within python: ::
+
+   queryData = butler.registry.queryDatasets
+   where = "exposure.observation_type='zero' AND detector=1"
+   exps = list(queryData("raw", collections='DECam/raw/all',
+                         instrument="DECam", where=where))
+   expids = tuple(x.dataId["exposure"] for x in exps)
+   print(f'BIASEXPS="{expids}"')
+
+The test dataset used here returns this list of bias exposures: ::
+
+   BIASEXPS="(970488, 970489, 970490, ... 971166)"
+
+Ingesting flat data
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The final set of data to be ingested are the raw flat frames ('dome flat'): ::
+
+   LOGFILE=$LOGDIR/ingest_flat.log; \
+   FLATFILES=/path/to/flat/raw/images/raw_*.fz; \
+   date | tee $LOGFILE; \
+   butler ingest-raws $REPO $FLATFILES --transfer link \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+| Note: The runtime for this command was ~5 minutes, ingesting 6200 distinct Butler datasets from 100 exposures.
+
+Flat exposures have now been ingested into your repo. Check that the flat calibration frames have been successfully ingested using: ::
+
+   butler query-dimension-records $REPO exposure \
+   --where "instrument='DECam' AND exposure.observation_type='dome flat'"
+
+| Note: if an attempt is made to ingest a file which was already been ingested, the science pipelines will fail for that particular file. This behaviour is as expected, and not a cause for concern.
+
+A list of flat exposure IDs can be extracted within python: ::
+
+   queryData = butler.registry.queryDatasets
+   where = "exposure.observation_type='dome flat' AND detector=1"
+   exps = list(queryData("raw", collections="DECam/raw/all",
+                         instrument="DECam", where=where))
+   expids = tuple(x.dataId["exposure"] for x in exps)
+   print(f'FLATEXPS="{expids}"')
+
+The test dataset used here returns this list of flat exposures: ::
+
+   FLATEXPS="(970228, 970229, ... 1054292)"
+
 
 Defining visits
 --------------------------------
+
+Once all raw data has been ingested, we can define visits from exposures in the butler registry. This sets up the exposure IDs within the butler, allowing future runs to use this information when using the -d or --where data queries. Without this step, processing steps after ISR (i.e., characterizeImage onwards) will fail with ``RuntimeError: QuantumGraph is empty.``. ::
+
+   LOGFILE=$LOGDIR/define_visits.log; \
+   date | tee $LOGFILE; \
+   butler define-visits $REPO lsst.obs.decam.DarkEnergyCamera \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+| Note: this run took ~1 minute with these data. Do not use the ``-j N`` syntax here to run this process on more than one processor. Doing so will cause multiple database is locked errors as each processor attempts to write to the same butler.
+
 
 Set up a default collection
 =================
