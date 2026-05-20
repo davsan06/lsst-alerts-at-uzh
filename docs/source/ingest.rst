@@ -108,7 +108,7 @@ New filters also need to be registered in the skymap repository. Central wavelen
 Create a new butler
 --------------------------------
 
-A new butler will be created in the directory /projects/MERIAN/repo. Here we set aliases for the output repository directory: ::
+A new butler will be created. Here we set aliases for the output repository directory: ::
 
     REPO=/shares/soares-santos.physik.uzh/ButlerProjects/DESGW
     mkdir -p $REPO
