@@ -450,8 +450,82 @@ Once all raw data has been ingested, we can define visits from exposures in the 
    2>&1 | tee -a $LOGFILE; \
    date | tee -a $LOGFILE
 
-| Note: this run took ~1 minute with these data. Do not use the ``-j N`` syntax here to run this process on more than one processor. Doing so will cause multiple database is locked errors as each processor attempts to write to the same butler.
+Calibration
+=================
 
+Determine calibration frame validity ranges
+--------------------------------
+Now that raw bias (zero) and dome flat calibration frames have been ingested, validation date ranges need to be determined. For DESGW, we opt to construct calibraton frames which are certified across the entire timespan of our data; from 2023-05-01 to 2025-12-01.
+
+Build bias frames
+--------------------------------
+
+Next, the master bias frames are built. These frames need to be built for each valid date range (see section above).
+
+First, check the build pipeline: ::
+
+   pipetask build \
+   -p $CP_PIPE_DIR/pipelines/DECam/cpBias.yaml \
+   --show pipeline
+
+It's best to pipe this into some output .yaml, which I will call ``cp_bias.yaml``, and review it before running.
+
+The ``cpBias`` pipeline may also be viewed graphically: ::
+   
+   pipetask build \
+   -p $CP_PIPE_DIR/pipelines/DECam/cpBias.yaml \
+   --pipeline-dot /tmp/pipeline.dot; \
+   dot /tmp/pipeline.dot -Tpdf > $LOGDIR/pipeline_cpBias.pdf
+
+Build master bias (zero) frames, ensuring that all required input collections are given as arguments to -i: ::
+
+   BIASEXPS="(1249372, 1249373, 1258298, 1258299, 1278668, 1288161, 1288162, 1288163, 1298843, 1298844, 1300533, 1302332, 1302333, 1302685, 1302686, 1302687, 1302688, 1324835, 1324836, 1324837, 1343446, 1343447, 1343451, 1343452, 1343480, 1343481, 1343482, 1343986, 1343987, 1343988, 1344182, 1344183, 1344184, 1390552, 1390553, 1390700, 1390701, 1413071, 1413072, 1413073, 1439507, 1443176, 1443177)"
+   LOGFILE=$LOGDIR/pilot_cpBias.log; \
+   date | tee $LOGFILE; \
+   pipetask --long-log run --register-dataset-types -j 12 \
+   -b $REPO --instrument lsst.obs.decam.DarkEnergyCamera \
+   -i DECam/raw/all,DECam/calib/curated/19700101T000000Z,DECam/calib/unbounded \
+   -o DECam/calib/desgw_pilot/bias \
+   -p $CP_PIPE_DIR/pipelines/DECam/cpBias.yaml \
+   -d "instrument='DECam' AND exposure IN $BIASEXPS" \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+The above command requires the definition of ``BIASEXPS``, which can be done in python: ::
+
+   import lsst.daf.butler as daf_butler
+   but = daf_butler.Butler("/shares/soares-santos.physik.uzh/ButlerProjects/DESGW")
+   queryData = but.registry.queryDatasets
+   where = "exposure.observation_type='zero' AND detector=1"
+   exps = list(queryData("raw", collections='DECam/raw/all',instrument="DECam", where=where))
+   expids = tuple(x.dataId["exposure"] for x in exps)
+   print(f'BIASEXPS="{expids}"')
+   expids = tuple(x.dataId["exposure"] for x in exps)
+   print(f'BIASEXPS="{expids}"')
+   BIASEXPS="(1249372, 1249373, 1258298, 1258299, 1278668, 1288161, 1288162, 1288163, 1298843, 1298844, 1300533, 1302332, 1302333, 1302685, 1302686, 1302687, 1302688, 1324835, 1324836, 1324837, 1343446, 1343447, 1343451, 1343452, 1343480, 1343481, 1343482, 1343986, 1343987, 1343988, 1344182, 1344183, 1344184, 1390552, 1390553, 1390700, 1390701, 1413071, 1413072, 1413073, 1439507, 1443176, 1443177)"
+
+To avoid an error regarding missing defects dataset types, an input collection containing defects must also be supplied in the ``cpBias`` run. Here, these data will be ingested into the repo when running ``write-curated-calibrations``, for example. The instructions here make use of the ``DECam/calib/curated/19700101T000000Z`` collection. Other collections containing ``defects`` are also available, however, some of the commonly unused detectors are missing (i.e., there are <62). If defects data are not available at all, adding ``-c isr:doDefect=False`` to the ``pipetask run`` command will disable defect masking when running the ``cpBias`` pipeline.
+
+On occasion, some of the tasks (quanta) may fail, likely due to memory issues. In such cases, an afterburner can be run on a single core to try the failed tasks again. To do so, add ``--extend-run`` and ``--skip-existing`` to the ``pipetask run`` command, and remove ``-j N`` to prevent it from running on multiple cores. This will help ensure that the most memory-intensive quanta will not request too much simultaneous memory usage.
+
+Check the collections, dataset types and datasets now present in the repo: ::
+
+   butler query-collections $REPO "*bias*"
+   butler query-dataset-types $REPO
+   butler query-datasets $REPO --collections DECam/calib/merian9813/bias
+   butler query-datasets $REPO --collections DECam/calib/merian9813/bias bias
+
+Certify bias frames
+--------------------------------
+
+Generate crosstalk sources
+--------------------------------
+
+Build flat frames
+--------------------------------
+
+Certify flat frames
+--------------------------------
 
 Set up a default collection
 =================
