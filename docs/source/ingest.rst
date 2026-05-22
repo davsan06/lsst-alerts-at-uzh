@@ -502,7 +502,7 @@ The above command requires the definition of ``BIASEXPS``, which can be done in 
    print(f'BIASEXPS="{expids}"')
    expids = tuple(x.dataId["exposure"] for x in exps)
    print(f'BIASEXPS="{expids}"')
-   BIASEXPS="(1249372, 1249373, 1258298, 1258299, 1278668, 1288161, 1288162, 1288163, 1298843, 1298844, 1300533, 1302332, 1302333, 1302685, 1302686, 1302687, 1302688, 1324835, 1324836, 1324837, 1343446, 1343447, 1343451, 1343452, 1343480, 1343481, 1343482, 1343986, 1343987, 1343988, 1344182, 1344183, 1344184, 1390552, 1390553, 1390700, 1390701, 1413071, 1413072, 1413073, 1439507, 1443176, 1443177)"
+   >> BIASEXPS="(1249372, 1249373, 1258298, 1258299, 1278668, 1288161, 1288162, 1288163, 1298843, 1298844, 1300533, 1302332, 1302333, 1302685, 1302686, 1302687, 1302688, 1324835, 1324836, 1324837, 1343446, 1343447, 1343451, 1343452, 1343480, 1343481, 1343482, 1343986, 1343987, 1343988, 1344182, 1344183, 1344184, 1390552, 1390553, 1390700, 1390701, 1413071, 1413072, 1413073, 1439507, 1443176, 1443177)"
 
 To avoid an error regarding missing defects dataset types, an input collection containing defects must also be supplied in the ``cpBias`` run. Here, these data will be ingested into the repo when running ``write-curated-calibrations``, for example. The instructions here make use of the ``DECam/calib/curated/19700101T000000Z`` collection. Other collections containing ``defects`` are also available, however, some of the commonly unused detectors are missing (i.e., there are <62). If defects data are not available at all, adding ``-c isr:doDefect=False`` to the ``pipetask run`` command will disable defect masking when running the ``cpBias`` pipeline.
 
