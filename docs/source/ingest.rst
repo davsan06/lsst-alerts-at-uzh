@@ -512,20 +512,122 @@ Check the collections, dataset types and datasets now present in the repo: ::
 
    butler query-collections $REPO "*bias*"
    butler query-dataset-types $REPO
-   butler query-datasets $REPO --collections DECam/calib/merian9813/bias
-   butler query-datasets $REPO --collections DECam/calib/merian9813/bias bias
+   butler query-datasets $REPO --collections DECam/calib/desgw_pilot/bias
+   butler query-datasets $REPO --collections DECam/calib/desgw_pilot/bias bias
 
 Certify bias frames
 --------------------------------
 
+Certify the biases for a given date range. Arguments: ``REPO``, ``INPUT_COLLECTION``, ``OUTPUT_COLLECTION``, ``DATASET_TYPE_NAME``: ::
+   
+   butler certify-calibrations \
+   $REPO DECam/calib/desgw_pilot/bias DECam/calib/desgw_pilot bias \
+   --begin-date 2023-04-01T00:00:00 --end-date 2025-11-30T23:59:59
+
+You may check what certified date ranges have been applied to the bias data in Python by querying dataset associations in the output collection. For example, to check only detector #1: ::
+
+   qda = butler.registry.queryDatasetAssociations
+   coll = "DECam/calib/desgw_pilot"
+   biases = [x for x in qda("bias", collections=coll) if x.ref.dataId["detector"] == 1]
+   print(biases)
+
+which produces a list of all biases relating to detector #1 (in the case of this example document, there should be only 1 result at present). Inspecting the properties of this object gives the timespan, e.g.: ::
+
+   print(f"{biases[0].timespan.begin.value = }")
+   print(f"{biases[0].timespan.end.value = }")
+
 Generate crosstalk sources
 --------------------------------
+
+The next step is to generate ``crosstalk`` sources using step 0 of the Data Release Production (DRP) pipeline (DRP.yaml). Crosstalk sources need to be generated for any raw we want to run actual ISR on (i.e., raw flats and raw science frames). Step 0 of DRP.yaml runs only the doOverscan aspect of the ISR (instrument signature removal) task. Here, I used the Merian step zero pipeline. It can be visualized using: ::
+
+   pipetask build \
+   -p $DRP_PIPE_DIR/pipelines/DECam/DRP-Merian.yaml#step0 \
+   --show pipeline
+
+Run step0 for raw flats: ::
+
+   LOGFILE=$LOGDIR/step0_flat_0.log; \
+   date | tee $LOGFILE; \
+   pipetask --long-log run --register-dataset-types -j 12 \
+   -b $REPO --instrument lsst.obs.decam.DarkEnergyCamera \
+   -i DECam/raw/all,DECam/calib/desgw_pilot,DECam/calib/unbounded \
+   -o DECam/calib/desgw_pilot/crosstalk \
+   -p /home/smacbr/Butler-imports/s3it_setup/desgw/cp_crosstalk_i.yaml \
+   -d "instrument='DECam' AND exposure IN $FLATEXPS" \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+> Note that if the above, or any other job fails, you can add `` --extend-run --skip-existing --clobber-outputs `` to the ``pipetask run`` command to continue the run without starting over.
+
+Extend the crosstalk RUN collection to also include science exposures: ::
+
+   LOGFILE=$LOGDIR/step0_science.log; \
+   date | tee -a $LOGFILE; \
+   pipetask --long-log run --register-dataset-types -j 12 \
+   --extend-run --skip-existing \
+   -b $REPO --instrument lsst.obs.decam.DarkEnergyCamera \
+   -i DECam/raw/all,DECam/calib/desgw_pilot,DECam/calib/unbounded \
+   -o DECam/calib/desgw_pilot/crosstalk \
+   -p /home/smacbr/Butler-imports/s3it_setup/desgw/cp_crosstalk_i.yaml \
+   -d "instrument='DECam' AND exposure IN $SCIEXPS" \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+The overscanRaw dataset types should now be available in the output repository. Check the collections and datasets: ::
+
+   butler query-collections $REPO
+   butler query-datasets $REPO overscanRaw
 
 Build flat frames
 --------------------------------
 
+This step constructs the master flat frames (which requires using the biases). The cpFlat pipeline can be visualized using: ::
+
+   pipetask build \
+   -p $CP_PIPE_DIR/pipelines/DECam/cpFlat.yaml \
+   --show pipeline
+
+Build master flats: ::
+
+   LOGFILE=$LOGDIR/cpFlat.log; \
+   date | tee $LOGFILE; \
+   pipetask --long-log run --register-dataset-types -j 12 \
+   -b $REPO --instrument lsst.obs.decam.DarkEnergyCamera \
+   -i DECam/raw/all,DECam/calib/desgw_pilot,DECam/calib/desgw_pilot/crosstalk,DECam/calib/curated/19700101T000000Z,DECam/calib/unbounded \
+   -o DECam/calib/desgw_pilot/flat \
+   -p $CP_PIPE_DIR/pipelines/DECam/cpFlat.yaml \
+   -d "instrument='DECam' AND exposure IN $FLATEXPS" \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+Check what types of data now exist in the output collection: ::
+
+   butler query-collections $REPO
+   butler query-dataset-types $REPO
+   butler query-datasets $REPO --collections DECam/calib/desgw_pilot/flat
+   butler query-datasets $REPO --collections DECam/calib/desgw_pilot/flat flat   
+
 Certify flat frames
 --------------------------------
+
+Certify the flats for a given date range. Arguments: ``REPO``, ``INPUT_COLLECTION``, ``OUTPUT_COLLECTION``, ``DATASET_TYPE_NAME``: ::
+
+   butler certify-calibrations \
+   $REPO DECam/calib/desgw_pilot/flat DECam/calib/desgw_pilot flat \
+   --begin-date 2025-08-25T00:00:00 --end-date 2025-09-30T00:00:00
+
+You may check what certified date ranges have been applied to the flat data in Python by querying dataset associations in the output collection. For example, to check only detector #1: ::
+
+   qda = butler.registry.queryDatasetAssociations
+   coll = "DECam/calib/desgw_pilot
+   flats = [x for x in qda("flat", collections=coll) if x.ref.dataId["detector"] == 1]
+   print(flats)
+
+which produces a list of all flats relating to detector #1 (in the case of this example document, there should be only 1 result at present). Inspecting the properties of this object gives the timespan, e.g.: ::
+
+   print(f"{flats[0].timespan.begin.value = }")
+   print(f"{flats[0].timespan.end.value = }")
 
 Set up a default collection
 =================
