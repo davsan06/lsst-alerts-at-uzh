@@ -632,6 +632,61 @@ which produces a list of all flats relating to detector #1 (in the case of this 
 Set up a default collection
 =================
 
+Data in the Science Pipelines are arranged into collections; groupings of data. Here we establish a default collection which contains the commonly required raw `RUN` collections. Whilst this step is not strictly necessary, this will allow us to specify only a single `INPUT` collection for future raw data processing: ::
+
+   INPUT=DECam/defaults/desgw_pilot
+
+If this step is not performed, future data processing will need to specify all required input collections explicitly: ::
+
+   -i long,comma,separated,list,of,child,collections
+
+If this step is followed then future data processing from raw data should only need to specify the default collection: ::
+
+   -i $INPUT
+
+| Note: it is not currently possible to query a `CHAINED` collection containing a `CALIBRATION` child collection. By constructing a dedicated `CHAINED` collection containing only the `RUN` runs of `interest, this will allow users to query the `CHAINED` collection and avoid this error.
+
+A `CHAINED` collection can be set up either on the command line or in Python. To set up a `CHAINED` collection on the command line for all required input collections, run: ::
+
+   CHILDREN="DECam/raw/all,\
+   DECam/calib/desgw_pilot,\
+   DECam/calib/desgw_pilot/crosstalk,\
+   DECam/calib/curated/19700101T000000Z,\
+   DECam/calib/unbounded,\
+   skymaps,\
+   refcats"
+
+   butler collection-chain $REPO $INPUT $CHILDREN
+
+| Note: the `CHILDREN` list may be amended and the above command re-run to update this parent collection, if, for example, new data has been processed and a user would like to add the updated crosstalk `RUN` collection to this parent `CHAINED` collection.
+
+Alternatively, this may also be achieved in Python: ::
+
+   import lsst.daf.butler as dafButler
+   
+   REPO = "/shares/soares-santos.physik.uzh/ButlerProjects/DESGW"
+   default_collection = "DECam/defaults/desgw_pilot"
+   
+   # Set up a writeable butler
+   butler_writeable = dafButler.Butler(REPO, writeable=True)
+   registry_writeable = butler_writeable.registry
+   
+   # Register a new default CHAINED collection
+   registry_writeable.registerCollection(default_collection,
+                                         type = dafButler.CollectionType.CHAINED)
+   
+   # Add required CHILD collections into the CHAINED collection
+   registry_writeable.setCollectionChain(default_collection,
+                                         ["DECam/raw/all",
+                                          "DECam/calib/desgw_pilot",
+                                          "DECam/calib/desgw_pilot/crosstalk"
+                                          "DECam/calib/curated/19700101T000000Z",
+                                          "DECam/calib/unbounded",
+                                          "skymaps",
+                                          "refcats"])
+
+| Note: as above, if reprocessing data in future runs, you can amend the list above to add your own collections, and then re-run setCollectionChain to update default_collection. This allows for the default collection to stay relevant in linking to all necessary datasets as new data becomes available.
+
 Data release production
 =================
 
