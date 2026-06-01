@@ -690,6 +690,30 @@ Alternatively, this may also be achieved in Python: ::
 Data release production
 =================
 
+In this section we will proceed through all the relevant data processing steps to take raw DECam science data through to coadd outputs. These processed data will output into the `OUTPUT` `CHAINED` collection: ::
+
+   OUTPUT=DECam/runs/merian9813/w_2022_26
+
+Here, the `w_2022_26` is a reference to the weekly of the LSST Science Pipelines used to reduce these data.
+
+Processing consists of three main steps (1, 2 and 3):
+
+* Step 1: single frame processing.
+   * instrumental signature removal, initial bg subtraction / calibration / PSF estimation.
+* Step 2: post single frame processing.
+   * step 2a - initial visit aggregation.
+   * step 2b - tract-level characterization.
+   * step 2c - global collection summaries.
+   * step 2d - final source table generation.
+* Step 3: coadd level processing
+   * Warping visit-level images onto the coadd plane, constructing a coadd, running detection & deblending algorithms.
+* Step 4: difference image processing
+   * Subtract processed single frames and template frames to identify and analyze interesting difference image sources.
+
+If outputting to an already existing collection in the commands below, the following arguments should be appended to the pipetask run commands below: ::
+
+   --extend-run --skip-existing --clobber-outputs
+
 Step 1: Single visit processing
 --------------------------------
 
