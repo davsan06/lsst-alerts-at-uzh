@@ -692,9 +692,9 @@ Data release production
 
 In this section we will proceed through all the relevant data processing steps to take raw DECam science data through to coadd outputs. These processed data will output into the `OUTPUT` `CHAINED` collection: ::
 
-   OUTPUT=DECam/runs/merian9813/w_2022_26
+   OUTPUT=DECam/runs/desgw_pilot/v29_2_1
 
-Here, the `w_2022_26` is a reference to the weekly of the LSST Science Pipelines used to reduce these data.
+Here, the `v29_2_1` is a reference to the 29.2.1 major release of the LSST Science Pipelines used to reduce these data.
 
 Processing consists of four main steps:
 
@@ -716,6 +716,101 @@ If outputting to an already existing collection in the commands below, the follo
 
 Step 1: Single visit processing
 --------------------------------
+
+Processed visit images (PVIs) and preliminary source tables are produced in step 1.
+```{admonition} The Stage 1 DESGW .yaml:
+:class: dropdown ::
+   description: |
+     The DRP pipeline specialized for the DECam instrument, developed against the
+     DESGW dataset.
+   
+     Prior to running subsets or tasks in this pipeline, the DECam prerequisite
+     task isrForCrosstalkSources must be run. More information on that task can be
+     found in the isrForCrosstalkSources.yaml pipeline file.
+   instrument: lsst.obs.decam.DarkEnergyCamera
+   parameters:
+     add_point_source: false
+     fix_centroid: false
+     use_shapelet_psf: false
+   tasks:
+     isr:
+       class: lsst.ip.isr.IsrTask
+       config:
+       - doAmpOffset: true
+         ampOffset.doApplyAmpOffset: false
+         connections.crosstalkSources: overscanRaw
+         doCrosstalk: true
+     calibrateImage:
+       class: lsst.pipe.tasks.calibrateImage.CalibrateImageTask
+       config:
+       - file:
+         - $DRP_PIPE_DIR/config/calibrateImage.py
+         connections.initial_stars_schema: src_schema
+         connections.stars_footprints: src
+         connections.stars: source
+         connections.exposure: calexp
+         connections.background: calexpBackground
+       - connections.stars: preSource
+         connections.exposure: calexp
+         connections.background: calexpBackground
+         photometry.match.referenceSelection.magLimit.fluxField: i_flux
+         photometry.match.referenceSelection.magLimit.maximum: 21.0
+     transformPreSourceTable:
+       class: lsst.pipe.tasks.postprocess.TransformSourceTableTask
+       config:
+       - functorFile: $PIPE_TASKS_DIR/schemas/PreSource.yaml
+         connections.inputCatalog: preSource
+         connections.outputCatalog: preSourceTable
+   contracts:
+   - contract: isr.doFlat == True if calibrateImage.do_illumination_correction == True
+       else True
+   subsets:
+     processCcd:
+       subset:
+       - calibrateImage
+       - isr
+       description: 'Set of tasks to run when doing single frame processing, without
+         any conversions to Parquet/DataFrames or visit-level summaries.
+   
+         '
+     step1:
+       subset:
+       - calibrateImage
+       - isr
+       - transformPreSourceTable
+       description: |
+         Per-detector tasks that can be run together to start the DRP pipeline.
+   
+         These should never be run with 'tract' or 'patch' as part of the data ID
+         expression if any later steps will also be run, because downstream steps
+         require full visits and 'tract' and 'patch' constraints will always
+         select partial visits that overlap that region.
+```
+
+Then run the bash script to submit the job to the grid.
+
+```{admonition} The Stage 1 DESGW submission script.:
+:class: dropdown ::
+   INPUT="DECam/defaults/desgw_pilot"
+   OUTPUT="DECam/runs/desgw_pilot/v29_2_1"
+   PIPEYAML="/shares/soares-santos.physik.uzh/repos/Butler-imports/s3it_setup/desgw/stage1DESGW.yaml"
+   
+   DATAQUERY="exposure.day_obs > 20250825
+   AND exposure.day_obs < 20250930
+   AND exposure.observation_type='science'
+   AND detector NOT IN (31,61)"
+   
+   LOGFILE=$LOGDIR/desgw_pilot_step1.log; \
+   date | tee $LOGFILE; \
+   pipetask --long-log run --register-dataset-types -j 30 \
+   -b $REPO --instrument lsst.obs.decam.DarkEnergyCamera \
+   -i $INPUT \
+   -o $OUTPUT \
+   -p $PIPEYAML  \
+   -d "instrument='DECam' AND $DATAQUERY" \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+```
 
 Step 2: Photometric and astrometric calibration
 --------------------------------
