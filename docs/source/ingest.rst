@@ -718,8 +718,10 @@ Step 1: Single visit processing
 --------------------------------
 
 Processed visit images (PVIs) and preliminary source tables are produced in step 1.
-```{admonition} The Stage 1 DESGW .yaml:
-:class: dropdown ::
+
+The Stage 1 DESGW .yaml:
+
+```{toggle} ::
    description: |
      The DRP pipeline specialized for the DECam instrument, developed against the
      DESGW dataset.
@@ -789,8 +791,8 @@ Processed visit images (PVIs) and preliminary source tables are produced in step
 
 Then run the bash script to submit the job to the grid.
 
-```{admonition} The Stage 1 DESGW submission script.:
-:class: dropdown ::
+```{toggle} ::
+
    INPUT="DECam/defaults/desgw_pilot"
    OUTPUT="DECam/runs/desgw_pilot/v29_2_1"
    PIPEYAML="/shares/soares-santos.physik.uzh/repos/Butler-imports/s3it_setup/desgw/stage1DESGW.yaml"
