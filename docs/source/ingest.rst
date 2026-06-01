@@ -696,7 +696,7 @@ In this section we will proceed through all the relevant data processing steps t
 
 Here, the `w_2022_26` is a reference to the weekly of the LSST Science Pipelines used to reduce these data.
 
-Processing consists of three main steps (1, 2 and 3):
+Processing consists of four main steps:
 
 * Step 1: single frame processing.
    * instrumental signature removal, initial bg subtraction / calibration / PSF estimation.
