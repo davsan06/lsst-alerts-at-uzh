@@ -719,9 +719,7 @@ Step 1: Single visit processing
 
 Processed visit images (PVIs) and preliminary source tables are produced in step 1.
 
-The Stage 1 DESGW .yaml:
-
-```{toggle} ::
+The Stage 1 DESGW .yaml: ::
    description: |
      The DRP pipeline specialized for the DECam instrument, developed against the
      DESGW dataset.
@@ -787,11 +785,8 @@ The Stage 1 DESGW .yaml:
          expression if any later steps will also be run, because downstream steps
          require full visits and 'tract' and 'patch' constraints will always
          select partial visits that overlap that region.
-```
 
-Then run the bash script to submit the job to the grid.
-
-```{toggle} ::
+Then run the bash script to submit the job to the grid. ::
 
    INPUT="DECam/defaults/desgw_pilot"
    OUTPUT="DECam/runs/desgw_pilot/v29_2_1"
@@ -812,7 +807,6 @@ Then run the bash script to submit the job to the grid.
    -d "instrument='DECam' AND $DATAQUERY" \
    2>&1 | tee -a $LOGFILE; \
    date | tee -a $LOGFILE
-```
 
 Step 2: Photometric and astrometric calibration
 --------------------------------
