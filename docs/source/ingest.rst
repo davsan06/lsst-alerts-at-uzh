@@ -719,7 +719,8 @@ Step 1: Single visit processing
 
 Processed visit images (PVIs) and preliminary source tables are produced in step 1.
 
-The Stage 1 DESGW .yaml: ::
+The Stage 1 DESGW .yaml: 
+::
    description: |
      The DRP pipeline specialized for the DECam instrument, developed against the
      DESGW dataset.
