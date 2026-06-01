@@ -818,3 +818,146 @@ Step 3: Difference image processing
 Step 4: Image Coaddition
 --------------------------------
 
+=================
+Appendix
+=================
+
+Useful commands
+=================
+
+This section provides some useful command-line commands which may be used to interact with the data.
+
+query-collections
+--------------------------------
+
+Query collections in the repo: ::
+
+   butler query-collections $REPO "*u/seanmacb*"
+
+The final search pattern may use standard glob syntax (e.g., note the asterisks above).
+
+query-datasets
+--------------------------------
+
+Query the datasets which live in a given collection: ::
+
+   butler query-datasets $REPO \
+   --collections u/seanmacb/testrun/01 \
+   --where "instrument='DECam' AND skymap='hsc_rings_v1' AND tract=9813" \
+   calexp
+
+If the final dataset type (calexp in the example above) is not given, all dataset types found will be printed to the command line.
+
+collection-chain
+--------------------------------
+
+Redefine a `CHAINED` collection to only contain certain child `RUN` collections: ::
+
+   butler collection-chain $REPO PARENT "CHILD1,CHILD2"
+
+This command is useful to use prior to attempting to delete a CHAINED collection, ensuring that no attempt is made to delete input raw collections.
+
+remove-runs
+--------------------------------
+
+Remove one or more `RUN` collections: ::
+
+   butler remove-runs $REPO COLLECTION
+
+remove-collections
+--------------------------------
+
+Remove one or more non-RUN collections: ::
+
+   butler remove-collections $REPO COLLECTION
+
+What tracts cover my data?
+==========================
+
+The visitSummary tables produced in step 2a contain important information on single frame processed visits. This information may be used to find out which tracts overlap with your data.
+
+To generate a list of tract overlaps for a single visit, in Python: ::
+   
+   from collections import defaultdict
+   import lsst.daf.butler as dafButler
+   
+   butler = dafButler.Butler('/project/lskelvin/repo')
+   
+   grouped_by_tract = defaultdict(set)
+   for data_id in butler.registry.queryDataIds(
+       ["tract", "visit", "detector"],
+       datasets="visitSummary",
+       collections="DECam/runs/merian9813/w_2022_26",
+       instrument="DECam",
+       visit=971666,
+   ):
+       grouped_by_tract[data_id["tract"]].add(data_id)
+   
+   print({k: len(v) for k, v in grouped_by_tract.items()})
+
+To get total tract coverage for all visits in a given collection, remove the visit= argument above.
+
+Transferring datasets from one machine to another
+==========================
+
+To transfer datasets from one machine to another (e.g., from science cluster to somewhere else), first, on the source machine in Python: ::
+
+   outdir = "/path/to/output/on/destination"
+   
+   datasetType = ["objectTable_tract", "deepCoadd", "deepCoadd_calexp"] # List all your dataset objects you want to transfer
+   collection = "HSC/runs/RC2/w_2022_04/DM-33402" # List the collection where you can find these objects 
+   dataId = dict(skymap="hsc_rings_v1", tract=9813) # Define your data ID
+   
+   with butler.export(directory=outdir, format="yaml", transfer="copy") as export:
+       items = []
+       found = set(butler.registry.queryDatasets(datasetType,
+                                                 collections=collection,
+                                                 dataId=dataId))
+       items.extend(found)
+       export.saveDatasets(items)
+
+Next, in the output directory on the source machine: ::
+
+   tar -czvf data_transfer.tar.gz *
+
+Transfer the file (here named data_transfer.tar.gz) from the source machine to the destination machine. Extract the tarball on the source machine: ::
+
+   tar -xzvf data_transfer.tar.gz
+
+Next, on the source machine: ::
+   
+   LOGFILE=$LOGDIR/data_import.log; \
+   butler import $REPO \
+   /path/to/data_transfer_directory \
+   --transfer copy \
+   --skip-dimensions skymap,tract,patch \
+   2>&1 | tee -a $LOGFILE; \
+   date | tee -a $LOGFILE
+
+Finally, set up a similarly named parent collection, e.g.: ::
+
+   PARENT=HSC/runs/RC2/w_2022_04/DM-33402 
+   CHILD=HSC/runs/RC2/w_2022_04/DM-33402/20220128T212035Z
+
+   butler collection-chain $REPO $PARENT $CHILD
+
+Decertifying a calibration dataset
+=====================
+
+To decertify a calibration collection (because, e.g., a new calibration collection has been generated and intended to replace the existing certified data on-disk): ::
+
+   writeable_butler = dafButler.Butler(
+       '/projects/MERIAN/repo', writeable=True
+   )
+   
+   writeable_butler.registry.decertify(
+       collection='DECam/calib/merian',
+       datasetType='bias',
+       timespan=lsst.daf.butler.Timespan(None, None),
+   )
+   
+   writeable_butler.registry.decertify(
+       collection='DECam/calib/merian',
+       datasetType='flat',
+       timespan=lsst.daf.butler.Timespan(None, None),
+   )
