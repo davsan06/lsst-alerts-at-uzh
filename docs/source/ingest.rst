@@ -60,7 +60,7 @@ This step is only required if the data to be ingested uses a filter which is not
 
 For this example, the required observation filter (``M438 DECam c0019 4380.0 260.0``) was not previously defined and had to be added manually. This modification has now been merged into the main branch, but the instructions on how to do this are maintained here, for reference. As a recap, to do so, first, git clone the ``obs_decam`` package into a local directory: ::
 
-    OBSDECAM=/home/lkelvin/repos/obs_decam
+    OBSDECAM=/shares/soares-santos.physik.uzh/repos/obs_decam
     git clone git@github.com:lsst/obs_decam.git $OBSDECAM``
     cd $OBSDECAM``
 
@@ -83,7 +83,7 @@ Finally, make sure both ``lsst_distrib`` and the relevant ``obs_`` package (obs_
 Double check that the local package has been loaded using: ::
 
     eups list | grep LOCAL
-    #   obs_decam             LOCAL:/home/lkelvin/repos/obs_decam
+    #   obs_decam             LOCAL:/shares/soares-santos.physik.uzh/repos/obs_decam
 
 Once complete, subsequent processing should be able to proceed. 
 
