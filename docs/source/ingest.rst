@@ -629,6 +629,14 @@ which produces a list of all flats relating to detector #1 (in the case of this 
    print(f"{flats[0].timespan.begin.value = }")
    print(f"{flats[0].timespan.end.value = }")
 
+Build fringes
+--------------------------------
+**TODO: Write this section**
+
+Certify fringes
+--------------------------------
+**TODO: Write this section**
+
 Set up a default collection
 =================
 
