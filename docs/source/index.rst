@@ -1,5 +1,5 @@
 Welcome to LSST Alerts at UZH documentation!
-===================================
+============================================
 
 **LSST Alerts at UZH** .
 This page will be populated with details on the implementation of the LSST Alert Stream at the University of Zurich, including how to use it and how to contribute.
@@ -19,6 +19,7 @@ Contents
    usage
    api
    ingest
+   postgres
 
 About this documentation
 ------------------------

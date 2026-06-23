@@ -24,15 +24,15 @@ There are three primary DECam dataset types:
     * data storage locations on s3it: ``/shares/soares-santos.physik.uzh/fitsFiles/desgw/single-epoch/*.fits.fz``
 
 * zero:
-    
+
     * bias frames
-    * observation type: 
+    * observation type:
     * data storage locations on s3it: ``/shares/soares-santos.physik.uzh/fitsFiles/desgw/bias/*.fits.fz``
 
 * domeflat:
-    
+
     * flat frames
-    * observation type: 
+    * observation type:
     * data storage locations on s3it: ``/shares/soares-santos.physik.uzh/fitsFiles/desgw/flat/*.fits.fz``
 
 The DECam focal plane - **Add image here at some point**.
@@ -46,7 +46,7 @@ Set up the Science Pipelines
 --------------------------------
 
 First, the LSST Science Pipelines ("the stack") needs to be set up on the science cluster machine. Typically, this is best executed on an interactive node, and not a login node. To support this, you can define two aliases in your `~/.bashrc` file. ::
-    
+
     alias start_interactive_node="srun --export=ALL --time=1:00:00 --mem=16G --nodes=1 --ntasks=1 --pty /bin/bash"
     alias lsst_setup_uzh="module load miniforge3; source /shares/soares-santos.physik.uzh/envs/lsst_stack/loadLSST_uzh.sh; conda activate /shares/soares-santos.physik.uzh/envs/lsst_stack/lsst-scipipe-10.1.0;setup lsst_distrib -c"``
 
@@ -85,7 +85,7 @@ Double check that the local package has been loaded using: ::
     eups list | grep LOCAL
     #   obs_decam             LOCAL:/shares/soares-santos.physik.uzh/repos/obs_decam
 
-Once complete, subsequent processing should be able to proceed. 
+Once complete, subsequent processing should be able to proceed.
 
 | If a warning similar to ingest WARN: Exposure DECam:ct4m20210318t032843 could not be registered: (sqlite3.IntegrityError) FOREIGN KEY constraint failed is returned, check that all filters are correctly assigned in the filters file.
 
@@ -135,17 +135,35 @@ Create a SQLite database (quickest and easiest)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 On the command line, create a butler repo: ::
-  
+
   butler create $REPO
-  
+
 This constructs a butler.yaml file in the $REPO directory.
-  
+
 | Note: after the gen3.sqlite3 file has been constructed, you may have to manually add write permissions for group members by running the command: ``chmod g+w gen3.sqlite3``.
 
-Create a PostgreSQL database.
+
+Use Butler with a PostgreSQL Database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is another option, but requires the service running on the machine in advance.
+We have a PostgreSQL database running on the Science Cloud at UZH, with two databases
+
+- ``decam_butler``: For DEcam processing
+- ``lsst_butler``: For LSST processing
+
+To setup copy the contents from https://wiki.physik.uzh.ch/cosmo/doku.php?id=science:alerts:cloud:postgres into ``~/.pgpass`` on the machine you want to connect to PostgreSQL from (either your own machine or your Science-Cluster account home director).
+
+- This file contains the PostgreSQL passwords! Keep them secret!
+- Set the file ownership as: ``chmod 0600 ~/.pgpass``
+
+  + **If you do not do this things will fail without error!**
+
+
+**TODO**: Document the changes / content of the .yaml file when using PostgreSQL.
+
+
+The setup of a PostgreSQL database for use with Butler for DEcam and LSST processing at UZH on the Science Cloud is documented in :doc:`postgres`.
+
 
 Register the instrument
 --------------------------------
@@ -189,30 +207,30 @@ Once the files are in place, we need to create astropy-readable .ecsv table file
     import os
     import glob
     import astropy.table
-    
+
     # output directory to save .ecsv files
     outdir = "/home/smacbr"
-    
+
     # full paths to LSST sharded reference catalogues
     gaiadr3 = "/shares/soares-santos.physik.uzh/refcats/GAIA_DR3/gaia_dr3"
     panstarrsps1 = "/shares/soares-santos.physik.uzh/refcats/ps1_pv3_3pi"
-    
+
     refcat_dirs = [
-    gaiadr3, 
+    gaiadr3,
     panstarrsps1,
     ]
-    
+
     # loop over each FITS file in all refcats
     # note: this constructs a series of .ecsv files, each containing two columns:
     # 1) the FITS filename, and 2) the htm7 pixel index
     for refcat_dir in refcat_dirs:
-    
+
         outfile = f"{outdir}/{os.path.basename(refcat_dir)}.ecsv"
         print(f"Saving to: {outfile}")
-    
+
         table = astropy.table.Table(names=("filename", "htm7"), dtype=("str", "int"))
         files = glob.glob(f"{refcat_dir}/[0-9]*.fits")
-    
+
         for ii, file in enumerate(files):
             print(f"{ii}/{len(files)} ({100*ii/len(files):0.1f}%)", end="\r")
             # try/except to catch extra .fits files which may be in this dir
@@ -222,7 +240,7 @@ Once the files are in place, we need to create astropy-readable .ecsv table file
                 continue
             else:
                 table.add_row((file, file_index))
-    
+
         table.write(outfile)
 
 
@@ -351,7 +369,7 @@ This view shows all available dimensions associated with each ingested science i
    AND exposure.day_obs > 20250830
    AND exposure.day_obs < 20250902
    AND detector=1"
-   
+
    butler query-datasets $REPO --where $WHERE raw
 
 | Note: To successfully use the ``--where`` argument, other dimensions may be required, such as instrument. The butler will complain with a UserExpressionError if a required dimension is not found.
@@ -471,7 +489,7 @@ First, check the build pipeline: ::
 It's best to pipe this into some output .yaml, which I will call ``cp_bias.yaml``, and review it before running.
 
 The ``cpBias`` pipeline may also be viewed graphically: ::
-   
+
    pipetask build \
    -p $CP_PIPE_DIR/pipelines/DECam/cpBias.yaml \
    --pipeline-dot /tmp/pipeline.dot; \
@@ -519,7 +537,7 @@ Certify bias frames
 --------------------------------
 
 Certify the biases for a given date range. Arguments: ``REPO``, ``INPUT_COLLECTION``, ``OUTPUT_COLLECTION``, ``DATASET_TYPE_NAME``: ::
-   
+
    butler certify-calibrations \
    $REPO DECam/calib/desgw_pilot/bias DECam/calib/desgw_pilot bias \
    --begin-date 2023-04-01T00:00:00 --end-date 2025-11-30T23:59:59
@@ -606,7 +624,7 @@ Check what types of data now exist in the output collection: ::
    butler query-collections $REPO
    butler query-dataset-types $REPO
    butler query-datasets $REPO --collections DECam/calib/desgw_pilot/flat
-   butler query-datasets $REPO --collections DECam/calib/desgw_pilot/flat flat   
+   butler query-datasets $REPO --collections DECam/calib/desgw_pilot/flat flat
 
 Certify flat frames
 --------------------------------
@@ -671,18 +689,18 @@ A `CHAINED` collection can be set up either on the command line or in Python. To
 Alternatively, this may also be achieved in Python: ::
 
    import lsst.daf.butler as dafButler
-   
+
    REPO = "/shares/soares-santos.physik.uzh/ButlerProjects/DESGW"
    default_collection = "DECam/defaults/desgw_pilot"
-   
+
    # Set up a writeable butler
    butler_writeable = dafButler.Butler(REPO, writeable=True)
    registry_writeable = butler_writeable.registry
-   
+
    # Register a new default CHAINED collection
    registry_writeable.registerCollection(default_collection,
                                          type = dafButler.CollectionType.CHAINED)
-   
+
    # Add required CHILD collections into the CHAINED collection
    registry_writeable.setCollectionChain(default_collection,
                                          ["DECam/raw/all",
@@ -727,12 +745,12 @@ Step 1: Single visit processing
 
 Processed visit images (PVIs) and preliminary source tables are produced in step 1.
 
-The Stage 1 DESGW .yaml: 
+The Stage 1 DESGW .yaml:
 ::
    description: |
      The DRP pipeline specialized for the DECam instrument, developed against the
      DESGW dataset.
-   
+
      Prior to running subsets or tasks in this pipeline, the DECam prerequisite
      task isrForCrosstalkSources must be run. More information on that task can be
      found in the isrForCrosstalkSources.yaml pipeline file.
@@ -780,7 +798,7 @@ The Stage 1 DESGW .yaml:
        - isr
        description: 'Set of tasks to run when doing single frame processing, without
          any conversions to Parquet/DataFrames or visit-level summaries.
-   
+
          '
      step1:
        subset:
@@ -789,7 +807,7 @@ The Stage 1 DESGW .yaml:
        - transformPreSourceTable
        description: |
          Per-detector tasks that can be run together to start the DRP pipeline.
-   
+
          These should never be run with 'tract' or 'patch' as part of the data ID
          expression if any later steps will also be run, because downstream steps
          require full visits and 'tract' and 'patch' constraints will always
@@ -800,12 +818,12 @@ Then run the bash script to submit the job to the grid. ::
    INPUT="DECam/defaults/desgw_pilot"
    OUTPUT="DECam/runs/desgw_pilot/v29_2_1"
    PIPEYAML="/shares/soares-santos.physik.uzh/repos/Butler-imports/s3it_setup/desgw/stage1DESGW.yaml"
-   
+
    DATAQUERY="exposure.day_obs > 20250825
    AND exposure.day_obs < 20250930
    AND exposure.observation_type='science'
    AND detector NOT IN (31,61)"
-   
+
    LOGFILE=$LOGDIR/desgw_pilot_step1.log; \
    date | tee $LOGFILE; \
    pipetask --long-log run --register-dataset-types -j 30 \
@@ -885,12 +903,12 @@ What tracts cover my data?
 The visitSummary tables produced in step 2a contain important information on single frame processed visits. This information may be used to find out which tracts overlap with your data.
 
 To generate a list of tract overlaps for a single visit, in Python: ::
-   
+
    from collections import defaultdict
    import lsst.daf.butler as dafButler
-   
+
    butler = dafButler.Butler('/project/lskelvin/repo')
-   
+
    grouped_by_tract = defaultdict(set)
    for data_id in butler.registry.queryDataIds(
        ["tract", "visit", "detector"],
@@ -900,7 +918,7 @@ To generate a list of tract overlaps for a single visit, in Python: ::
        visit=971666,
    ):
        grouped_by_tract[data_id["tract"]].add(data_id)
-   
+
    print({k: len(v) for k, v in grouped_by_tract.items()})
 
 To get total tract coverage for all visits in a given collection, remove the visit= argument above.
@@ -911,11 +929,11 @@ Transferring datasets from one machine to another
 To transfer datasets from one machine to another (e.g., from science cluster to somewhere else), first, on the source machine in Python: ::
 
    outdir = "/path/to/output/on/destination"
-   
+
    datasetType = ["objectTable_tract", "deepCoadd", "deepCoadd_calexp"] # List all your dataset objects you want to transfer
-   collection = "HSC/runs/RC2/w_2022_04/DM-33402" # List the collection where you can find these objects 
+   collection = "HSC/runs/RC2/w_2022_04/DM-33402" # List the collection where you can find these objects
    dataId = dict(skymap="hsc_rings_v1", tract=9813) # Define your data ID
-   
+
    with butler.export(directory=outdir, format="yaml", transfer="copy") as export:
        items = []
        found = set(butler.registry.queryDatasets(datasetType,
@@ -933,7 +951,7 @@ Transfer the file (here named data_transfer.tar.gz) from the source machine to t
    tar -xzvf data_transfer.tar.gz
 
 Next, on the source machine: ::
-   
+
    LOGFILE=$LOGDIR/data_import.log; \
    butler import $REPO \
    /path/to/data_transfer_directory \
@@ -944,7 +962,7 @@ Next, on the source machine: ::
 
 Finally, set up a similarly named parent collection, e.g.: ::
 
-   PARENT=HSC/runs/RC2/w_2022_04/DM-33402 
+   PARENT=HSC/runs/RC2/w_2022_04/DM-33402
    CHILD=HSC/runs/RC2/w_2022_04/DM-33402/20220128T212035Z
 
    butler collection-chain $REPO $PARENT $CHILD
@@ -957,13 +975,13 @@ To decertify a calibration collection (because, e.g., a new calibration collecti
    writeable_butler = dafButler.Butler(
        '/projects/MERIAN/repo', writeable=True
    )
-   
+
    writeable_butler.registry.decertify(
        collection='DECam/calib/merian',
        datasetType='bias',
        timespan=lsst.daf.butler.Timespan(None, None),
    )
-   
+
    writeable_butler.registry.decertify(
        collection='DECam/calib/merian',
        datasetType='flat',
