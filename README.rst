@@ -1,9 +1,6 @@
-Template for the Read the Docs tutorial
-=======================================
+Welcome to LSST Alerts at UZH documentation!
+============================================
 
-This GitHub template includes fictional Python library
-with some basic Sphinx docs.
+**LSST Alerts at UZH** .
 
-Read the tutorial here:
-
-https://docs.readthedocs.io/en/stable/tutorial/
+This repo holds the source code for the Read the Docs documentation of the DEcam and LSST image processing pipeline at UZH.
