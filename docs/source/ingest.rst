@@ -148,8 +148,8 @@ Use Butler with a PostgreSQL Database
 
 We have a PostgreSQL database running on the Science Cloud at UZH, with two databases
 
-- ``decam_butler``: For DEcam processing
-- ``lsst_butler``: For LSST processing
+- ``butler_main``: For final data products / production registry
+- ``butler_testing``: Secondary database which can be used as a testing target without disturbing the main registry.
 
 To setup copy the contents from https://wiki.physik.uzh.ch/cosmo/doku.php?id=science:alerts:cloud:postgres into ``~/.pgpass`` on the machine you want to connect to PostgreSQL from (either your own machine or your Science-Cluster account home director).
 

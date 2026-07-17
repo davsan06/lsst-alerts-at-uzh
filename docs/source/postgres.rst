@@ -16,7 +16,7 @@ High Level Steps to Reproduce the Current Setup
 #. Create a volume under https://cloud.science-it.uzh.ch/project/volumes/
 
    + Or re-use the existing volume with the existing data
-   
+
 #. Launch a new instance under https://cloud.science-it.uzh.ch/project/instances/
 
    #. Give it a name
@@ -52,11 +52,13 @@ The setup and configuration of the PostgreSQL database on the new instance is do
 
 - The setup script is located under: https://wiki.physik.uzh.ch/cosmo/doku.php?id=postgres:setup
 
+- At the same location an config file is stored, listing the two default databases ``butler_main`` and ``butler_testing``.
+
 
 This script executes the following high level actions:
 
-#. Prompt for the SQL password to use (for *decam_user* and *lsst_user* separately)
-#. Install PostgreSQL and other dependencies
+#. Read the list of databases, database users and passwords from a config file.
+#. Install PostgreSQL and other dependencies.
 
 #. Make sure the data volume is correctly formatted and mounted as ``/mnt/pgdata``
 
