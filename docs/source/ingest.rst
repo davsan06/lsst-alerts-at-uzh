@@ -158,10 +158,6 @@ To setup copy the contents from https://wiki.physik.uzh.ch/cosmo/doku.php?id=sci
 
   + **If you do not do this things will fail without error!**
 
-
-**TODO**: Document the changes / content of the .yaml file when using PostgreSQL.
-
-
 The setup of a PostgreSQL database for use with Butler for DEcam and LSST processing at UZH on the Science Cloud is documented in :doc:`postgres`.
 
 

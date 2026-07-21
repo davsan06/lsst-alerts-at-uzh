@@ -50,10 +50,14 @@ At this point you can login to the running instance via SSH.
 
 The setup and configuration of the PostgreSQL database on the new instance is done via a setup script.
 
-- The setup script is located under: https://wiki.physik.uzh.ch/cosmo/doku.php?id=postgres:setup
+- The setup scripts can be found on Github: https://github.com/seanmacb/image-processing-configs/tree/jw_lsst_pipeline_physik_cluster/utilities/postgres-setup
 
-- At the same location an config file is stored, listing the two default databases ``butler_main`` and ``butler_testing``.
+- The setup config files can be found on the internal WIKI: https://wiki.physik.uzh.ch/cosmo/doku.php?id=science:alerts:cloud:postgres
 
+
+
+Setup Script Description
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 This script executes the following high level actions:
 
@@ -80,6 +84,17 @@ This script executes the following high level actions:
 #. Configure PostgreSQL to listen to external interfaces.
 
 The script is in general *idempotent*, thus checking for existing settings, before changing anything!
+
+
+Backup Configuration
+^^^^^^^^^^^^^^^^^^^^
+
+The setup scripts also install a backup configuration, which dumps all PostgreSQL databases to disk once per day (via a cronjob).
+
+- Copy of the database dump files off-site is handled from a secondary machine.
+
+More details on the backup setup is given in https://wiki.physik.uzh.ch/cosmo/doku.php?id=science:alerts:cloud:postgres and https://github.com/seanmacb/image-processing-configs/tree/jw_lsst_pipeline_physik_cluster/utilities/postgres-setup
+
 
 
 Increase / Change the VM Instance
